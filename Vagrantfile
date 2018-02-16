@@ -64,6 +64,12 @@ Vagrant.configure("2") do |config|
   # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
   # documentation for more information about their specific syntax and use.
   config.vm.provision "shell", inline: <<-SHELL
+    if ! grep -qF "cd /vagrant" /home/vagrant/.bashrc ;
+    then echo "cd /vagrant" >> /home/vagrant/.bashrc ; echo 'added cd' ; fi
+
+    if ! grep -qF "alias code='rmate'" /home/vagrant/.bashrc ;
+    then echo "alias code='rmate'" >> /home/vagrant/.bashrc ; echo 'added alias' ; fi 
+
     sudo wget -O /usr/local/bin/rmate https://raw.github.com/aurora/rmate/master/rmate
     sudo chmod a+x /usr/local/bin/rmate 
   SHELL
