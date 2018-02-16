@@ -1,0 +1,18 @@
+
+README for {{ assignment }}
+
+  Student: William Gottschalk
+  Date: {{ Date }}
+
+Summary:
+
+  This submission contains the files:
+
+    {{ files.c  -- what they do}}
+    
+    Makefile    -- the makefile
+    Plan        -- a description of the design and operation of my code
+    typescript  -- a sample run
+
+Notes:
+  {{ additional notes }}

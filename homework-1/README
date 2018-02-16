@@ -1,0 +1,20 @@
+
+README for tlast
+
+  Student: William Gottschalk
+  Date: 2/10/2018
+
+Summary:
+
+  This submission contains the files:
+
+    tlast.c     -- entry point, reads form a utmp file and prints users 
+    utmplib.c   -- manages buffering of the utmp file
+    Makefile    -- the makefile
+    Plan        -- a description of the design and operation of my code
+    typescript  -- a sample run
+
+Notes:
+  This was definitely not my best effort. I under estimated what I would need
+  to do to create an efficient work flow with c programs. Corrections have
+  been made and you'll see a much better effort come homework 2.

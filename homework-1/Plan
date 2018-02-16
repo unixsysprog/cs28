@@ -1,0 +1,59 @@
+Design Document for tlast
+-----------------------------------------------------------
+Code by: William Gottschalk
+Date: 2/10/2018
+History:
+-----------------------------------------------------------
+
+Purpose:
+
+The purpose of tlast is to emulate the functionality of the last
+command restricted to the following features:
+
+    [a] the user must provide a terminal name. (ex: ./tlast pts/0)
+    [b] tlast reads from /var/log/wtmp unless a user passes a specific
+        file via the -f flag
+    [c] passing the -e flag will yield buffer statistics
+
+Ouline: 
+    The main function parses command line args returning if there is an
+    error or the terminal name is not provided.
+
+    Next the utmp file is opened via utmp_open function and a file descriptor
+    is return to main.
+
+    Main loops reading structs from a buffer until there are no more to be read
+    from the file. Since we only have to account for a single terminal, login 
+    and logout are sequential. Therefore the print_line function just checks 
+    for the whether the utmp struct is a USER_PROCESS or DEAD_PROCESS and 
+    prints the associated value.  
+
+    When the program is finished printing main closes the file via utmp_close
+
+
+    utmp_open:
+        performs open syscall
+        initializes pointers for access to the utmp buffer 
+
+    utmp_next:
+        returns the next struct in the buffer and decrementing the index
+        to the buffer. If the index is less than 0, utmp_reload is called
+
+    utmp_reload:
+        performs read syscall providing the buffer and resetting the index
+        to the buffer.
+
+
+Layering:
+  main:
+    parses command line args
+    utmp_open
+    utmp_next calls utmp_reload if no more items in buffer, returns utmp struct
+    while utmps structs, skip if utmp struct doesn't match terminal name
+      print the struct
+    closes the file via utmp_close
+
+File Structure:
+
+        tlast.c     --  prints utmp structs in reverse order
+        utmplib.c   --  library that controls the buffering of the utmp file

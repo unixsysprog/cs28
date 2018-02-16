@@ -1,0 +1,14 @@
+alyssa   pts/0        10.0.16.51       Thu Dec  7 13:27 - 15:26  (01:58)    
+russell  pts/0        10.0.8.100       Thu Dec  7 09:11 - 13:04  (03:53)    
+lamar    pts/0        10.0.15.116      Thu Dec  7 06:24 - 07:24  (01:00)    
+edlyn    pts/0        10.0.3.78        Thu Dec  7 05:22 - 06:07  (00:45)    
+adriana  pts/0        10.0.8.36        Thu Dec  7 04:01 - 05:03  (01:01)    
+bear     pts/0        10.0.11.186      Thu Dec  7 02:55 - 03:56  (01:01)    
+damien   pts/0        10.0.8.148       Thu Dec  7 01:05 - 02:53  (01:48)    
+carole   pts/0        10.0.12.129      Thu Dec  7 00:41 - 01:01  (00:19)    
+venus    pts/0        10.0.11.56       Wed Dec  6 16:40 - 17:43  (01:02)    
+virginie pts/0        10.0.14.89       Wed Dec  6 15:27 - 16:37  (01:10)    
+gabbie   pts/0        10.0.9.63        Wed Dec  6 13:39 - 15:21  (01:42)    
+shelton  pts/0        10.0.14.150      Wed Dec  6 10:31 - 12:00  (01:29)    
+
+wtmp-a begins Wed Dec  6 10:31:37 2017
