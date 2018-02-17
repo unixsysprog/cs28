@@ -1,5 +1,8 @@
+CC = cc
+CFLAGS = -Wall -std=c99
+
 tar:
-	cc -Wall -std=c99 main.c -o tarc
+	$(CC) $(CFLAGS) main.c tarc.c -o tarc
 
 clean:
 	if [ -f foo.tar ]; then rm foo.tar; fi;
