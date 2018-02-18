@@ -1,4 +1,5 @@
 #include "tarc.h"
+
 int is_special_dot_file(char *filename)
 {
 	return !strncmp(filename, ".", strlen(filename)) || !strncmp(filename, "..", strlen(filename));
@@ -38,7 +39,6 @@ int tar_it(tar_t *tar_ctx, char *filename)
 
 	if (!S_ISDIR(stat_buf->st_mode)) {
 		printf("I tarred the file: %s %s\n", tar_ctx->current_dir, filename);
-		chdir("..");
 		return 0;
 	}
 
@@ -59,6 +59,7 @@ int tar_it(tar_t *tar_ctx, char *filename)
 
 	while ((file = readdir(dir)) != NULL) {
 		if (is_special_dot_file(file->d_name)) continue; 
+
 		tar_ctx->current_dir = filename;
 		chdir(filename);
 		if ((error = tar_it(tar_ctx, file->d_name)) != 0) {
@@ -66,6 +67,7 @@ int tar_it(tar_t *tar_ctx, char *filename)
 			perror(file->d_name);
 			return -1;
 		};
+		chdir("..");
 	}
 
 	return 0;
