@@ -1,5 +1,5 @@
 CC = cc
-CFLAGS = -Wall -std=c99
+CFLAGS = -D _GNU_SOURCE -Wall -std=c99
 
 tarc: main.c tarc.c
 	$(CC) $(CFLAGS) main.c tarc.c -o tarc
