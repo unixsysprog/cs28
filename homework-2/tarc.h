@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #define BLOCK_SIZE 512
+#define CONTENT_SIZE 9728
 
 #define REGULAR     '0'
 #define HARDLINK    '1'

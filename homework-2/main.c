@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
 
 	char *archive_name = argv[1];
 	tar_t *tar_ctx = (tar_t *)malloc(sizeof(tar_t));
+	tar_ctx->current_dir = "";
 
 	if (tarc_open(tar_ctx, archive_name) != 0) {
 		return 2;
