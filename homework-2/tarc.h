@@ -10,8 +10,8 @@
 #include <unistd.h>
 
 #define BLOCK_SIZE 512
-// #define BLOCK_SIZE 10240
-#define CONTENT_SIZE 9728
+//#define BLOCK_SIZE 10240
+#define CONTENT_SIZE 10240
 
 #define REGULAR     '0'
 #define HARDLINK    '1'
@@ -22,12 +22,7 @@
 #define FIFO        '6'
 #define CONTIGUOUS  '7'
 
-
-struct tar_context {
-    char *current_dir;
-    int file;
-};
-
+/* for reference
 struct tar_header {
     char name[100];     // name of the file
     char mode[8];       // file mode
@@ -45,6 +40,7 @@ struct tar_header {
     char devminor[8];   // device minor number
     char prefix[155];   // file name prefix
 };
+*/
 
 #define NAME_SIZE 100
 #define NAME_OFFSET 0
@@ -94,11 +90,6 @@ struct tar_header {
 #define PREFIX_SIZE 155
 #define PREFIX_OFFSET 345
 
-typedef struct tar_context tar_t;
-typedef struct tar_header tar_header_t;
 typedef struct stat stat_t;
 
-int tarc_open(tar_t *, char *);
-int tarc_close(tar_t *);
-
-int tar_it(tar_t *, char *);
+int tar_it(int, char *);

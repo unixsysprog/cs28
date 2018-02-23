@@ -5,6 +5,11 @@
 #include <sys/stat.h>
 #include "tarc.h"
 
+// TODO: handle errors
+// Get blocks size right
+// Check other device files - extend test cases
+// write up
+// make a helpers file
 int main(int argc, char *argv[])
 {
 	if (argc < 3) {
@@ -16,21 +21,19 @@ int main(int argc, char *argv[])
 	char **files = &argv[2];
 
 	char *archive_name = argv[1];
-	tar_t *tar_ctx = (tar_t *)malloc(sizeof(tar_t));
-	tar_ctx->current_dir = "";
 
-	if (tarc_open(tar_ctx, archive_name) != 0) {
+	int archive = open(archive_name, O_RDWR | O_CREAT, 0644);
+	if (archive == -1) {
+		perror(archive_name);
 		return 2;
 	}
 
 	for (int i = 0; i < file_count; i++) {
-		if (tar_it(tar_ctx, files[i]) == 0) {
+		if (tar_it(archive, files[i]) == 0) {
 			printf("cannot tar file\n");
 			break;
 		}
-	}
-
-	tarc_close(tar_ctx);
-	free(tar_ctx);
+	} 
+	close(archive);
 	return 0;
 }
