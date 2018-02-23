@@ -63,28 +63,18 @@ int sum_field(char * field)
 	return sum;
 }
 
-void checksum(tar_header_t *tar_header)
+char* checksum(char *buffer)
 {
+	char *checksum_value = (char *) malloc(CHECKSUM_SIZE);
 	int sum = 0;
-	sum += sum_field(tar_header->name);
-	sum += sum_field(tar_header->mode);
-	sum += sum_field(tar_header->uid);
-	sum += sum_field(tar_header->gid);
-	sum += sum_field(tar_header->size);
-	sum += sum_field(tar_header->mtime);
-	sum += sum_field(tar_header->checksum);
-	sum += sum_field(&tar_header->type);
-	sum += sum_field(tar_header->linkname);
-	sum += sum_field(tar_header->ustar);
-	sum += sum_field(tar_header->uname);
-	sum += sum_field(tar_header->gname);
-	sum += sum_field(tar_header->devmajor);
-	sum += sum_field(tar_header->devminor);
-	sum += sum_field(tar_header->prefix);
+	for (int i = 0; i < 500; i++) {
+		sum += (int) buffer[i];
+	}
 	// sprintf(tar_header->checksum, "%014010\0 ");
-	sprintf(tar_header->checksum, "%06o", sum);
-	tar_header->checksum[6] = '\0';
-	tar_header->checksum[7] = ' ';
+	sprintf(checksum_value, "%06o", sum);
+	checksum_value[6] = '\0';
+	checksum_value[7] = ' ';
+	return checksum_value;
 }
 
 void get_file_stats(tar_header_t *tar_header, struct stat* stat) {
@@ -120,7 +110,7 @@ void get_file_stats(tar_header_t *tar_header, struct stat* stat) {
 	if (grp) strncpy(tar_header->gname, grp->gr_name, 32);
 
 
-	checksum(tar_header);
+	// checksum(tar_header);
 }
 
 
@@ -217,45 +207,126 @@ int write_header(tar_t *tar_ctx, char *filename, struct stat *stat_buf)
 	return write(tar_ctx->file, buf, BLOCK_SIZE);
 }
 
-int tar_file(tar_t *tar_ctx, char *filename, struct stat *stat_buf)
-{
-	write_header(tar_ctx, filename, stat_buf);
-	write_file(tar_ctx, filename);
-	return 1;
-}
+// int tar_file(tar_t *tar_ctx, char *filename, struct stat *stat_buf)
+// {
+// 	write_header(tar_ctx, filename, stat_buf);
+// 	write_file(tar_ctx, filename);
+// 	return 1;
+// }
 
-
-int tar_directory(tar_t *tar_ctx, char *filename, struct stat *stat_buf)
+int tar_directory(tar_t *tar_ctx, char *filename, stat_t *stat_buf)
 { 
 	write_header(tar_ctx, filename, stat_buf);
 	return 1;
 }
 
-int tar_it(tar_t *tar_ctx, char *filename) 
+int tar_header(tar_t *tar_ctx, char *filename, stat_t *stat_buf)
 {
+	char buffer[BLOCK_SIZE]; 
+	memset(buffer, '\0', BLOCK_SIZE);
 
-	struct stat *stat_buf = (struct stat *)malloc(sizeof(struct stat));
-	if (stat(filename, stat_buf) == -1) {
+	memcpy(&buffer[NAME_OFFSET], filename, strlen(filename));
+	sprintf(&buffer[MODE_OFFSET], "%07o", stat_buf->st_mode & 0777); 
+	sprintf(&buffer[UID_OFFSET], "%07o", stat_buf->st_uid); 
+	sprintf(&buffer[GID_OFFSET], "%07o", stat_buf->st_gid); 
+	sprintf(&buffer[MTIME_OFFSET], "%011o", (int) stat_buf->st_mtime); 
+	memcpy(&buffer[CHECKSUM_OFFSET], "        ", CHECKSUM_SIZE); 
+	memcpy(&buffer[TYPE_OFFSET], filename, TYPE_SIZE); 
+
+	if (S_ISREG(stat_buf->st_mode)) {
+		buffer[TYPE_OFFSET] = REGULAR;
+		sprintf(&buffer[SIZE_OFFSET], "%011o", (int) stat_buf->st_size); 
+	}
+	else if (S_ISLNK(stat_buf->st_mode)) {
+		buffer[TYPE_OFFSET] = SYMLINK; 
+		sprintf(&buffer[SIZE_OFFSET], "%011o", (int) 0); 
+		readlink(filename, &buffer[LINKNAME_OFFSET], LINKNAME_SIZE);
+	}
+	else if (S_ISCHR(stat_buf->st_mode)) buffer[TYPE_OFFSET] = CHAR;
+	else if (S_ISBLK(stat_buf->st_mode)) buffer[TYPE_OFFSET] = BLOCK;
+	else if (S_ISDIR(stat_buf->st_mode)) { 
+		sprintf(&buffer[SIZE_OFFSET], "%011o", (int) 0); 
+		buffer[TYPE_OFFSET] = DIRECTORY;
+	}
+	else if (S_ISFIFO(stat_buf->st_mode)) buffer[TYPE_OFFSET] = FIFO;
+
+	memcpy(&buffer[USTAR_OFFSET], "ustar", USTAR_SIZE);
+	memcpy(&buffer[USTAR_V_OFFSET], "00", USTAR_V_SIZE);
+	getlogin_r(&buffer[UNAME_OFFSET], UNAME_SIZE);
+	struct group * grp = getgrgid(stat_buf->st_gid);	
+	if (grp) {
+		memcpy(&buffer[GNAME_OFFSET], grp->gr_name, strlen(grp->gr_name));
+	}
+	sprintf(&buffer[DEVMAJOR_OFFSET], "0000000");
+	sprintf(&buffer[DEVMINOR_OFFSET], "0000000");
+	// memcpy(&buf[PREFIX_OFFSET], filename, PREFIX_SIZE);
+
+	char *checksum_value = checksum(buffer); 
+	memcpy(&buffer[CHECKSUM_OFFSET], checksum_value, CHECKSUM_SIZE); 
+
+	return write(tar_ctx->file, buffer, BLOCK_SIZE);
+}
+
+int tar_file(tar_t *tar_ctx, char *filename, stat_t *stat_buf) 
+{ 
+	if (S_ISLNK(stat_buf->st_mode) || S_ISDIR(stat_buf->st_mode)) return 1;
+
+	int fd = open(filename, O_RDONLY);
+	if (fd == -1) {
+		perror(filename);
+		exit(1);
+	}
+char buf[BLOCK_SIZE];
+	memset(buf, '\0', BLOCK_SIZE);
+
+	int bytes_read;
+	while ( (bytes_read = read(fd, buf, BLOCK_SIZE)) > 0) {
+		if (write(tar_ctx->file, buf, BLOCK_SIZE) <= 0) {
+			perror(filename);
+			exit(1);
+		} 
+		memset(buf, '\0', BLOCK_SIZE);
+	} 
+	return 1;
+}
+
+// int tar_it(tar_t *tar_ctx, char *filename)
+// {
+// 	stat_t *stat_buf = (stat_t *) malloc(sizeof(stat_t));
+// 	if (lstat(filename, stat_buf) == -1) {
+// 		perror(filename);
+// 		return errno;
+// 	};
+
+// 	tar_header(tar_ctx, filename, stat_buf);
+// 	tar_file(tar_ctx, filename, stat_buf); 
+// 	return 1;
+// }
+
+char * append(char *pathname, char *filename)
+{
+	char * path = (char *) malloc(strlen(pathname) + strlen(filename));
+	sprintf(path, "%s%s", pathname, filename);
+	return path;
+}
+
+int tar_it(tar_t *tar_ctx, char *filename)
+{ 
+	stat_t *stat_buf = (stat_t *) malloc(sizeof(stat_t));
+	if (lstat(filename, stat_buf) == -1) {
 		perror(filename);
 		return errno;
 	};
 
-	if (!S_ISDIR(stat_buf->st_mode)) {
-		if(tar_file(tar_ctx, filename, stat_buf) != 1) {
-			perror(filename);
-			return 1;
-		}
-		return 0;
+	if (S_ISDIR(stat_buf->st_mode) && filename[strlen(filename)-1] != '/') {
+		filename = append(filename, "/");
 	}
-	if (filename[strlen(filename)-1] != '/') {
-		asprintf(&filename, "%s/", filename);
-	}
-	printf("filename: %s\n", filename);
 
-	// int error = tar_directory(tar_ctx, filename);
-	if (tar_directory(tar_ctx, filename, stat_buf) != 1) {
-		perror(filename);
-		return 1; 
+	tar_header(tar_ctx, filename, stat_buf);
+	tar_file(tar_ctx, filename, stat_buf); 
+
+	if (!S_ISDIR(stat_buf->st_mode)) {
+		return 1;
 	}
 
 	DIR *dir;
@@ -265,23 +336,71 @@ int tar_it(tar_t *tar_ctx, char *filename)
 	}
 
 	struct dirent *file; 
-	int error;
 	while ((file = readdir(dir)) != NULL) {
 		if (is_special_dot_file(file->d_name)) continue; 
 
-		tarc_chdir(tar_ctx, filename);
-
-		if ((error = tar_it(tar_ctx, file->d_name)) != 0) {
+		char * path = append(filename, file->d_name);
+		if (tar_it(tar_ctx, path) != 1) {
 			printf("Error in: %s\n", filename);
 			perror(file->d_name);
 			return -1;
 		};
-	
-		tarc_chdir(tar_ctx, "..");
+		free(path);
 	}
+	return 1;
 
-	return 0;
 }
+// int tar_it(tar_t *tar_ctx, char *filename) 
+// {
+
+// 	struct stat *stat_buf = (struct stat *)malloc(sizeof(struct stat));
+// 	if (stat(filename, stat_buf) == -1) {
+// 		perror(filename);
+// 		return errno;
+// 	};
+
+// 	if (!S_ISDIR(stat_buf->st_mode)) {
+// 		if(tar_file(tar_ctx, filename, stat_buf) != 1) {
+// 			perror(filename);
+// 			return 1;
+// 		}
+// 		return 0;
+// 	}
+// 	if (filename[strlen(filename)-1] != '/') {
+// 		asprintf(&filename, "%s/", filename);
+// 	}
+// 	printf("filename: %s\n", filename);
+
+// 	// int error = tar_directory(tar_ctx, filename);
+// 	if (tar_directory(tar_ctx, filename, stat_buf) != 1) {
+// 		perror(filename);
+// 		return 1; 
+// 	}
+
+// 	DIR *dir;
+// 	if ( (dir = opendir(filename)) == NULL) {
+// 		printf("error\n");
+// 		return -1;
+// 	}
+
+// 	struct dirent *file; 
+// 	int error;
+// 	while ((file = readdir(dir)) != NULL) {
+// 		if (is_special_dot_file(file->d_name)) continue; 
+
+// 		tarc_chdir(tar_ctx, filename);
+
+// 		if ((error = tar_it(tar_ctx, file->d_name)) != 0) {
+// 			printf("Error in: %s\n", filename);
+// 			perror(file->d_name);
+// 			return -1;
+// 		};
+	
+// 		tarc_chdir(tar_ctx, "..");
+// 	}
+
+// 	return 0;
+// }
 
 // For the rewrite -- should implement tar_it to just tar a single file
 // then add directory recursion after

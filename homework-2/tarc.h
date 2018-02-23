@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #define BLOCK_SIZE 512
+// #define BLOCK_SIZE 10240
 #define CONTENT_SIZE 9728
 
 #define REGULAR     '0'
@@ -45,9 +46,57 @@ struct tar_header {
     char prefix[155];   // file name prefix
 };
 
+#define NAME_SIZE 100
+#define NAME_OFFSET 0
+
+#define MODE_SIZE 8
+#define MODE_OFFSET 100
+
+#define UID_SIZE 8
+#define UID_OFFSET 108
+
+#define GID_SIZE 8
+#define GID_OFFSET 116
+
+#define SIZE_SIZE 12
+#define SIZE_OFFSET 124
+
+#define MTIME_SIZE 12
+#define MTIME_OFFSET 136
+
+#define CHECKSUM_SIZE 8
+#define CHECKSUM_OFFSET 148
+
+#define TYPE_SIZE 1
+#define TYPE_OFFSET 156
+
+#define LINKNAME_SIZE 100
+#define LINKNAME_OFFSET 157
+
+#define USTAR_SIZE 6
+#define USTAR_OFFSET 257
+
+#define USTAR_V_SIZE 2
+#define USTAR_V_OFFSET 263
+
+#define UNAME_SIZE 32
+#define UNAME_OFFSET 265
+
+#define GNAME_SIZE 32
+#define GNAME_OFFSET 297
+
+#define DEVMAJOR_SIZE 8
+#define DEVMAJOR_OFFSET 329
+
+#define DEVMINOR_SIZE 8
+#define DEVMINOR_OFFSET 337
+
+#define PREFIX_SIZE 155
+#define PREFIX_OFFSET 345
 
 typedef struct tar_context tar_t;
 typedef struct tar_header tar_header_t;
+typedef struct stat stat_t;
 
 int tarc_open(tar_t *, char *);
 int tarc_close(tar_t *);

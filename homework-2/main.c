@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 	}
 
 	for (int i = 0; i < file_count; i++) {
-		if (tar_it(tar_ctx, files[i]) != 0) {
+		if (tar_it(tar_ctx, files[i]) == 0) {
 			printf("cannot tar file\n");
 			break;
 		}
