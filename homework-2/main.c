@@ -34,6 +34,8 @@ int main(int argc, char *argv[])
 			break;
 		}
 	} 
+
+	pad_file(archive);
 	close(archive);
 	return 0;
 }

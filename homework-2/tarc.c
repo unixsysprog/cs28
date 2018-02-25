@@ -1,5 +1,10 @@
 #include "tarc.h"
 
+int BLOCKS_WRITTEN = 0;
+
+
+/************************            HELPERS             ******************/
+
 int is_special_dot_file(char *filename)
 {
 	return !strncmp(filename, ".", strlen(filename)) || !strncmp(filename, "..", strlen(filename));
@@ -11,7 +16,7 @@ char* checksum(char *buffer)
 	char *checksum_value = (char *) malloc(CHECKSUM_SIZE);
 	int sum = 0;
 	for (int i = 0; i < 500; i++) {
-		sum += (int) buffer[i];
+		sum += (unsigned char) buffer[i];
 	}
 
 	sprintf(checksum_value, "%06o", sum);
@@ -21,7 +26,40 @@ char* checksum(char *buffer)
 }
 
 
+void increase_block_count()
+// increment the number of blocks whenever a buffer is written to the archive
+{
+	BLOCKS_WRITTEN = (BLOCKS_WRITTEN + 1) % 20;
+} 
+
+
+char * concat(char *pathname, char *filename)
+/*
+ * concat - immutably concats the pathname and filename strings
+ * 
+ * pathname - the prefix value of the new string
+ * filename - the suffix value of the new string
+ * 
+ * note: it is good practice to free the return value when no longer needed
+ */
+{
+	char * path = (char *) malloc(strlen(pathname) + strlen(filename));
+	sprintf(path, "%s%s", pathname, filename);
+	return path;
+}
+
+
+/*********************          TARRING FUNCTIONS         ********************/
+
 int tar_header(int archive, char *filename, stat_t *stat_buf)
+/*
+ * tar_header - writes the header information to the buffer
+ * 
+ * archive - file descriptor of the target archive
+ * filename - name of the file to be archived
+ * stat_buf - file info from the lstat syscall
+ * 
+ */
 {
 	char buffer[BLOCK_SIZE]; 
 	memset(buffer, '\0', BLOCK_SIZE);
@@ -64,19 +102,26 @@ int tar_header(int archive, char *filename, stat_t *stat_buf)
 
 	char *checksum_value = checksum(buffer); 
 	memcpy(&buffer[CHECKSUM_OFFSET], checksum_value, CHECKSUM_SIZE); 
-
+	free(checksum_value);
 	return write(archive, buffer, BLOCK_SIZE);
 }
 
 
 int tar_file(int archive, char *filename, stat_t *stat_buf) 
+/*
+ * tar_file - writes the contents of filename to the archive
+ * 
+ * archive - file descriptor of the archive
+ * filename - pathname of the file to be written to the archive
+ * stat_buf - file information from the lstat call
+ * 
+ */
 { 
-	char buf[CONTENT_SIZE];
-	memset(buf, '\0', CONTENT_SIZE);
-	// we should ignore symlinks and directories since they don't have contents
-	if (S_ISLNK(stat_buf->st_mode) || S_ISDIR(stat_buf->st_mode)) {
-		return write(archive, buf, CONTENT_SIZE); 
-	}
+	char buf[BLOCK_SIZE];
+	memset(buf, '\0', BLOCK_SIZE);
+
+	// we should ignore symlinks and directories since they don't have contents 
+	if (S_ISLNK(stat_buf->st_mode) || S_ISDIR(stat_buf->st_mode)) return 1;
 
 	int fd = open(filename, O_RDONLY);
 	if (fd == -1) {
@@ -85,26 +130,48 @@ int tar_file(int archive, char *filename, stat_t *stat_buf)
 	}
 
 	int bytes_read;
-	while ( (bytes_read = read(fd, buf, CONTENT_SIZE)) > 0) {
-		if (write(archive, buf, CONTENT_SIZE) <= 0) {
+	while ( (bytes_read = read(fd, buf, BLOCK_SIZE)) > 0) { 
+
+		if (write(archive, buf, BLOCK_SIZE) <= 0) {
 			perror(filename);
 			exit(1);
 		} 
-		memset(buf, '\0', CONTENT_SIZE);
+		increase_block_count();
+		memset(buf, '\0', BLOCK_SIZE);
 	} 
-	return 1;
+
+	return 1; 
 }
 
 
-char * append(char *pathname, char *filename)
-{
-	char * path = (char *) malloc(strlen(pathname) + strlen(filename));
-	sprintf(path, "%s%s", pathname, filename);
-	return path;
-}
-
+void pad_file(int archive) 
+/*
+ * pad_file - appends null blocks to end of archive until the specified
+ *            number of blocks is reached.
+ * 
+ * archive - file descriptor of the archive to append null blocks to
+ */
+{ 
+	char buf[BLOCK_SIZE];
+	memset(buf, '\0', BLOCK_SIZE);
+	int bytes_written;
+	// pad the end of the file with the remaining number of null blocks
+	while (BLOCKS_WRITTEN < 20) {
+		if( (bytes_written = write(archive, buf, BLOCK_SIZE)) < 0) {
+			perror("padding end of file");
+			exit(1);
+		}
+		BLOCKS_WRITTEN++;
+	}
+} 
 
 int tar_it(int archive, char *filename)
+/*
+ * tar_it - recursively walks the directory adding contents to the archive
+ * 
+ * archive - file descriptor to the target archive 
+ * filename - name of the file or directory to archive
+ */
 { 
 	stat_t *stat_buf = (stat_t *) malloc(sizeof(stat_t));  // get file info
 	if (lstat(filename, stat_buf) == -1) {
@@ -114,10 +181,11 @@ int tar_it(int archive, char *filename)
 
 	int is_dir = S_ISDIR(stat_buf->st_mode);
 	if (is_dir && filename[strlen(filename)-1] != '/') {  // add a backslash for dirs if needed
-		filename = append(filename, "/");
+		filename = concat(filename, "/");
 	}
 
 	tar_header(archive, filename, stat_buf);
+	increase_block_count();
 	tar_file(archive, filename, stat_buf); 
 
 	if (!is_dir) {   // stop recursing if we've reached a file
@@ -126,21 +194,21 @@ int tar_it(int archive, char *filename)
 
 	DIR *dir;
 	if ( (dir = opendir(filename)) == NULL) {
-		printf("error\n");
-		return -1;
+		perror(filename);
+		exit(1);
 	}
 
 	struct dirent *file; 
 	while ((file = readdir(dir)) != NULL) {
 		if (is_special_dot_file(file->d_name)) continue; 
 
-		char * path = append(filename, file->d_name); // concat path with filename
+		char * path = concat(filename, file->d_name); // concat path with filename
 		if (tar_it(archive, path) != 1) {
-			printf("Error in: %s\n", filename);
 			perror(file->d_name);
-			return -1;
+			exit(1);
 		};
 		free(path);
 	}
+
 	return 1; 
 }

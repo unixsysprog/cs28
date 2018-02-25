@@ -11,7 +11,8 @@
 
 #define BLOCK_SIZE 512
 //#define BLOCK_SIZE 10240
-#define CONTENT_SIZE 10240
+//#define CONTENT_SIZE 10240
+//#define CONTENT_SIZE 9728
 
 #define REGULAR     '0'
 #define HARDLINK    '1'
@@ -93,3 +94,4 @@ struct tar_header {
 typedef struct stat stat_t;
 
 int tar_it(int, char *);
+void pad_file(int);
