@@ -1,0 +1,22 @@
+Design Document for {{ library }}
+-----------------------------------------------------------
+Code by: William Gottschalk
+Date: {{ date }}
+History: {{ history }}
+-----------------------------------------------------------
+
+Purpose:
+{{ Provides a high level overview of features and how a user
+   is to interface with the application }}
+
+Ouline:
+
+{{ Verbal pseudo code for how the app will behave }}
+
+
+Layering:
+
+{{ outlines the function call stack }}
+
+File Structure:
+{{ one sentence description of each files responsibilities }}
