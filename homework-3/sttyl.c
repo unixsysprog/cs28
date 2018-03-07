@@ -17,14 +17,39 @@ void read_settings(struct termios *ttyinfo, struct winsize *window)
     show_some_flags( ttyinfo );                            /* show misc. flags	*/
 } 
 
-int flags[] = [NULL, NULL, NULL, NULL];
+struct flag_desc {
+    char *key;
+    int value;
+    int flag;
+};
+
+struct flag_desc flag_list[] = {
+    { .key = "igncr", .value = IGNCR, .flag = C_IFLAG },
+    { .key = "iuclc", .value = IUCLC, .flag = C_IFLAG },
+    { .key = "\0",    .value = 0,     .flag = 0    }
+};
+
+int lookup(char *flag_name)
+{
+    int i;
+    for( i = 0; flag_list[i].key != NULL; i++ ) {
+        if (strcmp(flag_name, flag_list[i].key) == 0) {
+            break;
+        }
+    }
+    return i;
+}
 
 void write_settings(struct termios *settings, int argc, char **argv)
 {
+    int *flags = malloc(4 * sizeof(int));
     static struct termios prev_settings;
     prev_settings = *settings;
+    int flag_d;
+    struct flag_desc flag_obj;
  
     for (int i = 0; i < argc; i++) {
+        printf("initial value of settings: %d\n", settings->c_iflag);
         if (strcmp(argv[i], "erase") == 0) {
             i += 1; 
             if (strlen(argv[i]) != 1) {
@@ -37,25 +62,31 @@ void write_settings(struct termios *settings, int argc, char **argv)
         // sketch this out
         if (argv[i][0] == '-') {
             // lookup returns {.key="echo", .value=ECHO, .flag=C_IFLAG(= 0)}
-            struct flag_obj = lookup(&argv[i][1]);
-            if (flags[flag_obj.flag] == NULL) {
-                flags[flag_obj.flag] = flag_value;
-            } else {
-                flags[flag_obj.flag] &= flag_value;
-            }
-            printf("arg[%d]: %s is OFF\n", i, &argv[i][1]);
-        }
-        else {
-            struct flag_obj = lookup(&argv[i][1]);
-            if (flags[flag_obj.flag] == NULL) {
-                flags[flag_obj.flag] = flag_value;
-            } else {
-                flags[flag_obj.flag] |= flag_value;
-            }
-            printf("arg[%d]: %s is ON\n", i, argv[i]);
-        }
-    }
 
+            flag_d = lookup(&argv[i][1]);
+            flag_obj = flag_list[flag_d];
+
+            if (flag_obj.key == NULL) {
+                printf("oops!\n");
+                exit(EXIT_FAILURE);
+            }
+
+            // check for null and switch statement for groups
+            settings->c_iflag &= ~flag_obj.value;
+            printf("arg[%d]: %s is OFF\n", i, &argv[i][1]);
+        } 
+        else { 
+            flag_d = lookup(argv[i]);
+            printf("flag int: %d\n", flag_d);
+            flag_obj = flag_list[flag_d];
+
+            // check for null and switch statement for groups
+            settings->c_iflag |= flag_obj.value;
+            printf("arg[%d]: %s is ON with value: %d\n", i, argv[i], flag_obj.value);
+        }
+    } 
+
+    printf("final value of iflags: %d\n", flags[C_IFLAG]);
     if ( tcsetattr(0, TCSANOW, settings ) != 0 ) {
         printf("something went wrong\n");
     }

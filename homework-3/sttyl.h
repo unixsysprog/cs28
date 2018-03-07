@@ -1,3 +1,6 @@
+#include <termios.h>
+
+#define C_IFLAG 0
 
 void show_baud(speed_t);
 void show_some_flags( struct termios *);
