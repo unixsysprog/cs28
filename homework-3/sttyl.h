@@ -1,6 +1,7 @@
 #include <termios.h>
 
-#define C_IFLAG 0
+enum CtrlFlags { C_IFLAG, C_OFLAG, C_CFLAG, C_LFLAG, C_CC, NO_FLAG };
+typedef enum CtrlFlags c_flags_t;
 
 void show_baud(speed_t);
 void show_some_flags( struct termios *);

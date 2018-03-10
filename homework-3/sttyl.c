@@ -20,13 +20,25 @@ void read_settings(struct termios *ttyinfo, struct winsize *window)
 struct flag_desc {
     char *key;
     int value;
-    int flag;
+    c_flags_t flag;
 };
 
 struct flag_desc flag_list[] = {
-    { .key = "igncr", .value = IGNCR, .flag = C_IFLAG },
-    { .key = "iuclc", .value = IUCLC, .flag = C_IFLAG },
-    { .key = "\0",    .value = 0,     .flag = 0    }
+    // Input Flags
+    { .key = "igncr",  .value = IGNCR,  .flag = C_IFLAG },
+    { .key = "iuclc",  .value = IUCLC,  .flag = C_IFLAG }, 
+    { .key = "icrnl",  .value = ICRNL,  .flag = C_IFLAG },
+    // Control Flags
+    { .key = "hupcl",  .value = HUPCL,  .flag = C_CFLAG }, 
+    // Local Flags
+    { .key = "echo",   .value = ECHO,   .flag = C_LFLAG }, 
+    { .key = "echoe",  .value = ECHOE,  .flag = C_LFLAG },
+    { .key = "isig",   .value = ISIG,   .flag = C_LFLAG },
+    { .key = "icanon", .value = ICANON, .flag = C_LFLAG },
+    // Output Flags
+    { .key = "opost",  .value = OPOST,  .flag = C_OFLAG }, 
+    // Null terminating struct
+    { .key = NULL,     .value = -1,     .flag = NO_FLAG }  
 };
 
 int lookup(char *flag_name)
@@ -42,53 +54,81 @@ int lookup(char *flag_name)
 
 void write_settings(struct termios *settings, int argc, char **argv)
 {
-    int *flags = malloc(4 * sizeof(int));
-    static struct termios prev_settings;
-    prev_settings = *settings;
+    //static struct termios prev_settings;
+    //prev_settings = *settings;
     int flag_d;
     struct flag_desc flag_obj;
  
     for (int i = 0; i < argc; i++) {
-        printf("initial value of settings: %d\n", settings->c_iflag);
+        // checking for special args
         if (strcmp(argv[i], "erase") == 0) {
             i += 1; 
+            if (i >= argc) {
+                fprintf(stderr, "sttyl: missing argument to 'erase'\n");
+                exit(EXIT_FAILURE);
+            }
             if (strlen(argv[i]) != 1) {
-                fprintf(stderr, "stty: invalid integer argument `%s`", argv[i]);
+                fprintf(stderr, "sttyl: invalid integer argument '%s'\n", argv[i]);
                 exit(EXIT_FAILURE);
             }
             settings->c_cc[VERASE] = (int) *argv[i];
             continue;
         }
-        // sketch this out
-        if (argv[i][0] == '-') {
-            // lookup returns {.key="echo", .value=ECHO, .flag=C_IFLAG(= 0)}
 
+        // checking for negates
+        if (argv[i][0] == '-') {
+            // lookup returns {.key="echo", .value=ECHO, .flag=C_IFLAG(= 0)} 
             flag_d = lookup(&argv[i][1]);
             flag_obj = flag_list[flag_d];
 
-            if (flag_obj.key == NULL) {
-                printf("oops!\n");
-                exit(EXIT_FAILURE);
+            // turn the bit off for the correct flag
+            switch (flag_obj.flag) {
+                case C_IFLAG:
+                    settings->c_iflag &= ~flag_obj.value;
+                    break;
+                case C_OFLAG:
+                    settings->c_oflag &= ~flag_obj.value;
+                    break;
+                case C_CFLAG:
+                    settings->c_cflag &= ~flag_obj.value;
+                    break;
+                case C_LFLAG:
+                    settings->c_lflag &= ~flag_obj.value;
+                    break;
+                default:
+                    fprintf(stderr, "sttyl: invalid argument '%s'\n", argv[i]);
+                    exit(EXIT_FAILURE); 
             }
-
-            // check for null and switch statement for groups
-            settings->c_iflag &= ~flag_obj.value;
-            printf("arg[%d]: %s is OFF\n", i, &argv[i][1]);
-        } 
+        }
+        // checking for positives
         else { 
             flag_d = lookup(argv[i]);
-            printf("flag int: %d\n", flag_d);
-            flag_obj = flag_list[flag_d];
+            flag_obj = flag_list[flag_d]; 
 
-            // check for null and switch statement for groups
-            settings->c_iflag |= flag_obj.value;
-            printf("arg[%d]: %s is ON with value: %d\n", i, argv[i], flag_obj.value);
+            // turn the bit on for the correct flag
+            switch (flag_obj.flag) {
+                case C_IFLAG:
+                    settings->c_iflag |= flag_obj.value;
+                    break;
+                case C_OFLAG:
+                    settings->c_oflag |= flag_obj.value;
+                    break;
+                case C_CFLAG:
+                    settings->c_cflag |= flag_obj.value;
+                    break;
+                case C_LFLAG:
+                    settings->c_lflag |= flag_obj.value;
+                    break;
+                default:
+                    fprintf(stderr, "sttyl: invalid argument '%s'\n", argv[i]);
+                    exit(EXIT_FAILURE); 
+            }
         }
     } 
 
-    printf("final value of iflags: %d\n", flags[C_IFLAG]);
     if ( tcsetattr(0, TCSANOW, settings ) != 0 ) {
-        printf("something went wrong\n");
+        perror("sttyl");
+        exit(EXIT_FAILURE);
     }
 }
 

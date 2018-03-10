@@ -5,4 +5,4 @@ sttyl: main.c sttyl.c
 	$(CC) $(CFLAGS) main.c sttyl.c -o sttyl
 
 clean: 
-	rm -f main.o sttyl.o
+	rm -f sttyl main.o sttyl.o
