@@ -61,7 +61,7 @@ void write_settings(struct termios *settings, int argc, char **argv)
  
     for (int i = 0; i < argc; i++) {
         // checking for special args
-        if (strcmp(argv[i], "erase") == 0) {
+        if (strcmp(argv[i], "erase") == 0 || strcmp(argv[i], "kill") == 0) {
             i += 1; 
             if (i >= argc) {
                 fprintf(stderr, "sttyl: missing argument to 'erase'\n");
@@ -72,11 +72,9 @@ void write_settings(struct termios *settings, int argc, char **argv)
                 exit(EXIT_FAILURE);
             }
             settings->c_cc[VERASE] = (int) *argv[i];
-            continue;
-        }
-
+        } 
         // checking for negates
-        if (argv[i][0] == '-') {
+        else if (argv[i][0] == '-') {
             // lookup returns {.key="echo", .value=ECHO, .flag=C_IFLAG(= 0)} 
             flag_d = lookup(&argv[i][1]);
             flag_obj = flag_list[flag_d];
