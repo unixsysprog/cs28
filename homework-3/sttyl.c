@@ -37,8 +37,11 @@ struct flag_desc flag_list[] = {
     { .key = "icanon", .value = ICANON, .flag = C_LFLAG },
     // Output Flags
     { .key = "opost",  .value = OPOST,  .flag = C_OFLAG }, 
-    // Null terminating struct
-    { .key = NULL,     .value = -1,     .flag = NO_FLAG }  
+    // Control Flags
+    { .key = "erase",  .value = VERASE,  .flag = C_CC   }, 
+    { .key = "kill",   .value = VKILL,   .flag = C_CC   }, 
+    // Null terminating struct 
+    { .key = NULL,     .value = -1,      .flag = NO_FLAG }  
 };
 
 int lookup(char *flag_name)
@@ -52,74 +55,82 @@ int lookup(char *flag_name)
     return i;
 }
 
-void write_settings(struct termios *settings, int argc, char **argv)
+void set_control(struct termios *settings, struct flag_desc * flag_obj, int argc, char **argv, int idx)
+{ 
+    if (idx >= argc) {
+        fprintf(stderr, "sttyl: missing argument to '%s'\n", flag_obj->key);
+        exit(EXIT_FAILURE);
+    }
+    if (strlen(argv[idx]) != 1) {
+        fprintf(stderr, "sttyl: invalid integer argument '%s'\n", argv[idx]);
+        exit(EXIT_FAILURE);
+    }
+    settings->c_cc[flag_obj->value] = (int) argv[idx][0]; 
+}
+
+void turn_bit_off(struct termios *settings, struct flag_desc *flag_obj, char *arg)
+{ 
+    // turn the bit off for the correct flag
+    switch (flag_obj->flag) {
+        case C_IFLAG:
+            settings->c_iflag &= ~flag_obj->value;
+            break;
+        case C_OFLAG:
+            settings->c_oflag &= ~flag_obj->value;
+            break;
+        case C_CFLAG:
+            settings->c_cflag &= ~flag_obj->value;
+            break;
+        case C_LFLAG:
+            settings->c_lflag &= ~flag_obj->value;
+            break;
+        default:
+            fprintf(stderr, "sttyl: invalid argument '%s'\n", arg);
+            exit(EXIT_FAILURE); 
+    } 
+}
+
+void turn_bit_on(struct termios *settings, struct flag_desc *flag_obj, char *arg)
+{ 
+    // turn the bit on for the correct flag
+    switch (flag_obj->flag) {
+        case C_IFLAG:
+            settings->c_iflag |= flag_obj->value;
+            break;
+        case C_OFLAG:
+            settings->c_oflag |= flag_obj->value;
+            break;
+        case C_CFLAG:
+            settings->c_cflag |= flag_obj->value;
+            break;
+        case C_LFLAG:
+            settings->c_lflag |= flag_obj->value;
+            break;
+        default:
+            fprintf(stderr, "sttyl: invalid argument '%s'\n", arg);
+            exit(EXIT_FAILURE); 
+    } 
+}
+
+void write_settings(struct termios *settings, int argc, char **argv )
 {
-    //static struct termios prev_settings;
-    //prev_settings = *settings;
-    int flag_d;
+    int flag_idx;
     struct flag_desc flag_obj;
  
     for (int i = 0; i < argc; i++) {
-        // checking for special args
-        if (strcmp(argv[i], "erase") == 0 || strcmp(argv[i], "kill") == 0) {
-            i += 1; 
-            if (i >= argc) {
-                fprintf(stderr, "sttyl: missing argument to 'erase'\n");
-                exit(EXIT_FAILURE);
-            }
-            if (strlen(argv[i]) != 1) {
-                fprintf(stderr, "sttyl: invalid integer argument '%s'\n", argv[i]);
-                exit(EXIT_FAILURE);
-            }
-            settings->c_cc[VERASE] = (int) *argv[i];
-        } 
-        // checking for negates
-        else if (argv[i][0] == '-') {
-            // lookup returns {.key="echo", .value=ECHO, .flag=C_IFLAG(= 0)} 
-            flag_d = lookup(&argv[i][1]);
-            flag_obj = flag_list[flag_d];
+        if (argv[i][0] == '-') {                 // check for negates
+            flag_idx = lookup(&argv[i][1]);
+            flag_obj = flag_list[flag_idx];
 
-            // turn the bit off for the correct flag
-            switch (flag_obj.flag) {
-                case C_IFLAG:
-                    settings->c_iflag &= ~flag_obj.value;
-                    break;
-                case C_OFLAG:
-                    settings->c_oflag &= ~flag_obj.value;
-                    break;
-                case C_CFLAG:
-                    settings->c_cflag &= ~flag_obj.value;
-                    break;
-                case C_LFLAG:
-                    settings->c_lflag &= ~flag_obj.value;
-                    break;
-                default:
-                    fprintf(stderr, "sttyl: invalid argument '%s'\n", argv[i]);
-                    exit(EXIT_FAILURE); 
-            }
-        }
-        // checking for positives
-        else { 
-            flag_d = lookup(argv[i]);
-            flag_obj = flag_list[flag_d]; 
+            turn_bit_off(settings, &flag_obj, argv[i]);
+        } else {                                 // checking for positives 
+            flag_idx = lookup(argv[i]);
+            flag_obj = flag_list[flag_idx]; 
 
-            // turn the bit on for the correct flag
-            switch (flag_obj.flag) {
-                case C_IFLAG:
-                    settings->c_iflag |= flag_obj.value;
-                    break;
-                case C_OFLAG:
-                    settings->c_oflag |= flag_obj.value;
-                    break;
-                case C_CFLAG:
-                    settings->c_cflag |= flag_obj.value;
-                    break;
-                case C_LFLAG:
-                    settings->c_lflag |= flag_obj.value;
-                    break;
-                default:
-                    fprintf(stderr, "sttyl: invalid argument '%s'\n", argv[i]);
-                    exit(EXIT_FAILURE); 
+            if ( flag_obj.flag == C_CC ) {       // handle C_CC flags separately
+                set_control(settings, &flag_obj, argc, argv, ++i); 
+            } else {
+                turn_bit_on(settings, &flag_obj, argv[i]);
             }
         }
     } 
@@ -154,8 +165,6 @@ void show_baud(speed_t baud_speed)
     }
     printf(" baud; "); 
 } 
-
-
 
 //[iflag, oflag, cflag, lflag, ispeed, ospeed, cc]
 struct flaginfo { tcflag_t fl_value; char *fl_name; };

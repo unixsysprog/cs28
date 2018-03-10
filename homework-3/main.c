@@ -5,17 +5,6 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 #include "sttyl.h"
-// all termbits are in:
-// /usr/include/asm-generic/termbits.h
-
-// testing for:
-// echo
-// echoe
-// icrnl
-// icanon
-// isig
-// opost
-// hupcl
 
 int main(int argc, char *argv[])
 {
@@ -33,10 +22,10 @@ int main(int argc, char *argv[])
     }
 
     // just reading settings
-    // if (argc == 1) { 
-    //     read_settings(&ttyinfo, &window);
-    //     return EXIT_SUCCESS;
-    // }
+    if (argc == 1) { 
+        read_settings(&ttyinfo, &window);
+        return EXIT_SUCCESS;
+    }
 
     // iterate through all other settings making sure they're
     // valid and then setting them.
