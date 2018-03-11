@@ -1,18 +1,34 @@
 
-README for {{ assignment }}
+README for Assignment 2
 
   Student: William Gottschalk
-  Date: {{ Date }}
+  Date: 3/10/2018
 
 Summary:
 
   This submission contains the files:
 
-    {{ files.c  -- what they do}}
-    
     Makefile    -- the makefile
     Plan        -- a description of the design and operation of my code
     typescript  -- a sample run
 
+    main.c      -- main entry point to the sttyl command
+
+    sttyl.h     -- header files of the sttyl command, exposes the read_settings
+                and write_settings functions 
+    sttyl.c     -- contains the read_settings and write_settings functions
+                also imports the table.h file
+
+    tables.h    -- contains the data types and function definitions for all of 
+                the functions used to perform the table lookups 
+    tables.c    -- split into two sections, read tables/functions and write
+                tables/functions.
+
 Notes:
-  {{ additional notes }}
+  Reading and writing tables were separated to make each implementation easier.
+  For reads it's easier to have multiple tables since you just need to iterate
+  over each struct and print whether it is ON or OFF.
+
+  For writes, having a single table is easier because you can determine if a
+  flag doesn't exist after you have finished iterating over the single table
+  rather than checking five different tables

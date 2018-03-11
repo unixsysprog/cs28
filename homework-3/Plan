@@ -1,22 +1,93 @@
-Design Document for {{ library }}
+Design Document for tarc
 -----------------------------------------------------------
 Code by: William Gottschalk
-Date: {{ date }}
-History: {{ history }}
+Date: 3/10/2018
+
 -----------------------------------------------------------
 
 Purpose:
-{{ Provides a high level overview of features and how a user
-   is to interface with the application }}
+The sttyl command will print the current control characters and their values
+if no arguments are suppied. If arguments are supplied, sttyl will attempt to
+set those arguments as new settings. If there is a failure, none of the settings
+get committed.
 
 Ouline:
 
-{{ Verbal pseudo code for how the app will behave }}
+The main function will determine whether to just read settings or write new
+settings depending on whether or now additional arguments have been passed.
 
+If there are no additional command line arguments, the read_settings function
+is called, otherwise the write_settings function is called and the argument
+vector is supplied.
+
+For the read_settings function, it prints the baud, row count and column count
+followed by control characters and settings flags.
+
+For the write_settings function, it iterates over each of the arguments
+supplied in argv and performs a lookup on the flag_list array. If the flag
+isn't found, then the function exists without ever calling tcsetattr.
+
+There are four types of arguments:
+    * control characters (ex: erase, intr, etc...),
+    * toggle off (-echo, -igncr, etc...),
+    * toggle on (echo, igncr, etc..),
+    * invalid settings (these, dont, do, anything)
+
+Each value is first checked for the leading dash. If the dash exists, a lookup
+is performed without the dash and that struct is passed into the turn_bits_off
+function. Otherwise the lookup is performed with the whole argument and that
+struct is passed to the turn_bits_on function.
+
+If the struct is put through a switch statement and the correct value gets
+assigned to the termios struct. If the switch statement fallsthrough, we
+know that we have an invalid argument and the program exists before calling
+tcsetattr.
 
 Layering:
 
-{{ outlines the function call stack }}
+* main 
+    * tcgetattr, ioctl -> system calls to get the structs of interest
+    * read_settings -> called if argc == 1
+                    -> prints the rows and the column count as well
+        * show_baud -> pretty prints the baud rate
+        * show_some_flags
+            * show_control_characters -> prints ctrl chars 3 per row
+            * show_flagset (x4) -> prints whether a flag is on or off
+                                   in each of the 4 flag categories
+
+    * write_settings
+        * lookup -> returns a struct in the flag_list whose key matches the
+                    the supplied argument (or the "null" struct at the end) 
+        * turn_bit_on -> performs a switch on flag field of the flag_desc_t 
+                          struct, turn on the bit at the appripriate field
+                          on the settings struct.
+        * turn_bit_off -> similar behavior to the turn_bit_on function, except
+                          that the bit is turned off this time. 
+        * set_control -> increments the current index in the argument vector
+                         and checks the validity of the argument before setting
+                         it on the settings struct
+        * tcsetattr -> sets all updates to the settings object
+
+
 
 File Structure:
-{{ one sentence description of each files responsibilities }}
+main.c:
+    main entry point into the app
+sttyl.c:
+    implements read_settings and write_settings functions
+sttyl.h:
+    exposes the read_settings and write_settings functions
+tables.c:
+    defines 5 lookup tables (for reads) and 1 lookup table (for writes)
+    implements: show_baud, show_control_chars, show_flag_set
+                lookup, turn_bit_off, turn_bit_on, set_control
+tables.h
+    for the reads: 
+        exposes show_baud, show_some_flags, show_flag_set
+        defines the flaginfo struct for the 5 reads lookup tables
+    for the writes: 
+        exposes turn_bit_on, turn_bit_off, set_control
+        defines the flag_description struct which the struct used for the
+            writes lookup table
+        defines CtrlFlag enum which represents all of the different .type
+            fields on the flag_description struct

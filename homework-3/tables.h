@@ -5,8 +5,11 @@
 struct flaginfo { tcflag_t fl_value; char *fl_name; };
 void show_baud(speed_t);
 void show_some_flags( struct termios *);
-void show_flagset( int thevalue, struct flaginfo[] );
+void show_flagset( int thevalue, struct flaginfo[] ); 
 
+/* 
+ * Definitions for Writes
+ */
 typedef enum CtrlFlags { 
     C_IFLAG,
     C_OFLAG,
@@ -16,10 +19,6 @@ typedef enum CtrlFlags {
     NO_FLAG 
 } c_flags_t;
 
-
-/* 
- * Definitions for Writes
- */
 typedef struct flag_description {
     char *key;
     int value;
