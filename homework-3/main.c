@@ -4,11 +4,11 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <termios.h>
+
 #include "sttyl.h"
 
 int main(int argc, char *argv[])
-{
-
+{ 
     struct termios ttyinfo;
     if (tcgetattr(0, &ttyinfo) != 0) {
         perror("cannot get params");
