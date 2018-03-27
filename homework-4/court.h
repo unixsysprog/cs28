@@ -18,5 +18,6 @@ typedef struct court {
 } court_t; 
 
 void court_init();
+int court_round_over();
 
 #endif

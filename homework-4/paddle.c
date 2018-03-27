@@ -1,6 +1,7 @@
 #include <curses.h>
 
 #include "court.h"
+#include "ball.h" 
 #include "paddle.h"
 
 void draw_paddle();
@@ -10,6 +11,9 @@ paddle_t the_paddle;
 
 void paddle_init()
 {
+    if (the_paddle.symbol != '\0')
+        erase_paddle();                 /* clears paddle after a lose */
+
     the_paddle.x_pos = PAD_START_X;
     the_paddle.y_pos = PAD_START_Y;
     the_paddle.length = PAD_LENGTH;
@@ -41,4 +45,12 @@ void paddle_move(dir_t dir)
     the_paddle.y_pos += dir;
     draw_paddle();
     move(LINES - 1, COLS - 1);  /* prevent cursor from jumping */
+}
+
+int paddle_contact(ball_t *ball)
+{
+    return (
+        the_paddle.y_pos < ball->y_pos && 
+        ball->y_pos < the_paddle.y_pos + the_paddle.length
+    );
 }

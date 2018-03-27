@@ -1,3 +1,4 @@
+#include "ball.h"
 #include "court.h"
 
 #define PAD_START_X ( RIGHT_EDGE )
@@ -17,3 +18,4 @@ typedef enum direction {
 
 void paddle_init();
 void paddle_move();
+int paddle_contact(ball_t *);

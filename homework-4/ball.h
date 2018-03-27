@@ -26,8 +26,9 @@ typedef struct ppball {
 } ball_t;
 
 typedef enum bounce_states { 
-    game_over, 
-    bounce
+    lose, 
+    bounce,
+    in_progress
 } bounce_states_t;
 
 void ball_init();

@@ -1,9 +1,13 @@
 #include <curses.h>
 #include <signal.h>
+#include <stdlib.h>
 
 #include "alarmlib.h"
 #include "court.h"
+#include "paddle.h"
 #include "ball.h"
+
+#define MAX(a, b) ((a) > (b) ? a : b)
 
 void ball_move(int); 
 bounce_states_t bounce_or_lose(ball_t *);
@@ -14,16 +18,18 @@ void ball_init()
 { 
     the_ball.x_pos = 10;
     the_ball.y_pos = 10;
-    the_ball.x_delay = the_ball.x_count = X_DELAY;
-    the_ball.y_delay = the_ball.y_count = Y_DELAY;
+    the_ball.x_delay = the_ball.x_count = rand() % 10 + X_DELAY;
+    the_ball.y_delay = the_ball.y_count = rand() % 10 + Y_DELAY;
     the_ball.x_dir = 1;
     the_ball.y_dir = 1;
     the_ball.symbol = DFL_SYMBOL;
 
+	mvprintw(0, 0, "ball speed (%d, %d)", the_ball.x_delay, the_ball.y_delay);
     mvaddch(the_ball.y_pos, the_ball.x_pos, the_ball.symbol);
 
     signal( SIGALRM, ball_move );
     set_ticker( 1000 / TICKS_PER_SECOND );
+	refresh();
 }
 
 void ball_move(int s)
@@ -50,7 +56,10 @@ void ball_move(int s)
 	if ( moved ){
 		mvaddch(y_cur, x_cur, BLANK);
 		mvaddch(the_ball.y_pos, the_ball.x_pos, the_ball.symbol);
-		bounce_or_lose( &the_ball );
+		if (bounce_or_lose( &the_ball ) == lose) {
+			court_round_over();
+			return;
+		}
 		move(LINES-1, COLS-1);		/* park cursor	*/
 		refresh();
 	}
@@ -64,17 +73,30 @@ void ball_move(int s)
  */
 bounce_states_t bounce_or_lose(ball_t *bp)
 {
-	bounce_states_t return_val = 0 ;
+	if ( bp->y_pos == TOP_BOUND ) { 
+		bp->y_dir = 1 ;
+		return bounce;
+	}
+	if ( bp->y_pos == BOT_BOUND ) {
+		bp->y_dir = -1 ; 
+		return bounce; 
+	}
 
-	if ( bp->y_pos == TOP_BOUND )
-		bp->y_dir = 1 , return_val = bounce ;
-	else if ( bp->y_pos == BOT_BOUND )
-		bp->y_dir = -1 , return_val = bounce;
+	if ( bp->x_pos == LEFT_BOUND ) {
+		bp->x_dir = 1 ;
+		return bounce; 
+	}
+	if ( bp->x_pos == RIGHT_BOUND && paddle_contact(bp)) { 
+		bp->x_dir = -1 ;
+		/* adjusts the speed usually faster but sometimes slower*/
+		bp->x_delay = MAX(1, bp->x_delay + (rand() % 5 - 3)); 
+		bp->y_delay = MAX(1, bp->y_delay + (rand() % 5 - 3));
+		return bounce;
+	}
 
-	if ( bp->x_pos == LEFT_BOUND )
-		bp->x_dir = 1 , return_val = bounce ;
-	else if ( bp->x_pos == RIGHT_BOUND )
-		bp->x_dir = -1 , return_val = bounce;
+	if (bp->x_pos > COLS) { /*the player should watch the ball travel offscreen */
+		return lose;
+	}
 
-	return return_val;
+	return in_progress;
 }

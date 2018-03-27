@@ -39,6 +39,7 @@ void set_up()
 	noecho();		/* turn off echo	*/
 	cbreak();		/* turn off buffering	*/
 
+	srand(getpid());
 	court_init();
 	paddle_init();
 	ball_init();
