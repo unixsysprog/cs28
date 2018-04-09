@@ -15,6 +15,11 @@ bounce_states_t bounce_or_lose(ball_t *);
 ball_t the_ball; 
 
 void ball_init()
+/* 
+ * initializes the ball struct
+ * sets the signal for ball_move and
+ * sets the timer
+ */
 { 
     the_ball.x_pos = 10;
     the_ball.y_pos = 10;
@@ -24,7 +29,6 @@ void ball_init()
     the_ball.y_dir = 1;
     the_ball.symbol = DFL_SYMBOL;
 
-	mvprintw(0, 0, "ball speed (%d, %d)", the_ball.x_delay, the_ball.y_delay);
     mvaddch(the_ball.y_pos, the_ball.x_pos, the_ball.symbol);
 
     signal( SIGALRM, ball_move );
@@ -33,10 +37,16 @@ void ball_init()
 }
 
 void ball_move(int s)
+/* 
+ * updates the position of the ball after each alarm
+ * if the ball leaves the court, then the function returns
+ * otherwise it reinitializes the signal for the next round
+ */
 {
 	int	y_cur, x_cur, moved;
 
 	signal( SIGALRM , SIG_IGN );		/* dont get caught now 	*/
+	court_update_timer();
 	y_cur = the_ball.y_pos ;		/* old spot		*/
 	x_cur = the_ball.x_pos ;
 	moved = 0 ;
@@ -67,11 +77,11 @@ void ball_move(int s)
     signal(SIGALRM, ball_move);		/* re-enable handler	*/
 }
 
+bounce_states_t bounce_or_lose(ball_t *bp)
 /* bounce_or_lose: if ball hits walls, change its direction
  *   args: address to ppball
  *   rets: 1 if a bounce happened, 0 if not
  */
-bounce_states_t bounce_or_lose(ball_t *bp)
 {
 	if ( bp->y_pos == TOP_BOUND ) { 
 		bp->y_dir = 1 ;
@@ -94,7 +104,7 @@ bounce_states_t bounce_or_lose(ball_t *bp)
 		return bounce;
 	}
 
-	if (bp->x_pos > COLS) { /*the player should watch the ball travel offscreen */
+	if (bp->x_pos > COLS) { /*the player should watch the ball move offscreen */
 		return lose;
 	}
 

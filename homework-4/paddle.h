@@ -19,3 +19,4 @@ typedef enum direction {
 void paddle_init();
 void paddle_move();
 int paddle_contact(ball_t *);
+void paddle_erase();

@@ -1,18 +1,35 @@
 
-README for {{ assignment }}
+README for Assignment 4 - Pong
 
   Student: William Gottschalk
-  Date: {{ Date }}
+  Date: 3/31/2018
 
 Summary:
 
   This submission contains the files:
 
-    {{ files.c  -- what they do}}
-    
     Makefile    -- the makefile
     Plan        -- a description of the design and operation of my code
     typescript  -- a sample run
+
+    alarmlib.c - timers for a high resolution clock
+    alarmlib.h - exposes settime and millisleep functions
+
+    ball.c     - contains data and movement logic related to the ball
+    ball.h     - defines structs for ball and exposes ball_init method
+    
+    court.c    - contains the data and drawing logic for the court and
+                 drawing logic when a ball leaves the court
+    court.h    - defines court and court_timer structs and exposes the
+                 court_init, court_round_over and update_timer functions
+
+    paddle.c   - defines data and logic for moving and drawing the paddle
+    paddle.h   - defines the struct for the paddle and exposes paddle_init,
+                 paddle_move, and paddle_contact functions
+
+    main.c     - instantiates the curses library, initializes all of the game 
+                 objects and listens for user input to move the paddle
+                 
 
 Notes:
   {{ additional notes }}

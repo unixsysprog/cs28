@@ -17,7 +17,12 @@ typedef struct court {
     int time_duration;
 } court_t; 
 
+typedef struct court_timer {
+    int time;
+} court_timer_t;
+
 void court_init();
 int court_round_over();
+void court_update_timer();
 
 #endif

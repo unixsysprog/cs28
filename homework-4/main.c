@@ -10,15 +10,19 @@
 #include "alarmlib.h"
 #include "paddle.h"
 
-void set_up();
+int set_up();
 void wrap_up();
 
 /** the main loop **/
 int main()
 { 
-	set_up(); 
+	if (set_up() == 0) {
+		return 0;
+	}
+
 	char c;
 	while ((c = getch()) != 'q') {
+		/* user vim keys to move paddle */
 		if (c == 'k') { 
 			paddle_move(up);
 			continue;
@@ -33,11 +37,16 @@ int main()
 }
 
 /*	init ppball struct, signal handler, curses	*/ 
-void set_up()
+int set_up()
 { 
 	initscr();		/* turn on curses	*/
 	noecho();		/* turn off echo	*/
 	cbreak();		/* turn off buffering	*/
+	if (LINES < 15 || COLS < 50) {
+		fprintf(stderr, "Screen is too small!\n");
+		wrap_up();
+		return 0;
+	}
 
 	srand(getpid());
 	court_init();
@@ -45,6 +54,8 @@ void set_up()
 	ball_init();
 	// signal(SIGINT, SIG_IGN);	/* ignore SIGINT	*/
 	refresh(); 
+
+	return 1;
 }
 
 /* stop ticker and curses */
