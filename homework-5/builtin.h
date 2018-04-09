@@ -8,5 +8,12 @@ void varsub(char **args);
 int assign(char *);
 int okname(char *);
 int is_export(char **, int *);
+int is_cd(char **, int *);
+int is_exit(char **, int *);
+int is_read(char **, int *);
+
+int exec_cd(char **);
+int exec_exit(char **);
+int exec_read(char **);
 
 #endif

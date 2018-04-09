@@ -14,7 +14,7 @@
  **		this one parses the command line into strings
  **		uses fork, exec, wait, and ignores signals
  **
- **     hist: 2017-04-12: changed comment to say "version 5"
+ **     hist: 2017-04-12: changed comment to say "version 5" 
  **/
 
 #define	DFL_PROMPT	"> "

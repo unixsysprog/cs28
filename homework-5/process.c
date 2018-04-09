@@ -39,7 +39,10 @@ int process(char *args[])
 	else if ( is_control_command(args[0]) )
 		rv = do_control_command(args);
 	else if ( ok_to_execute() )
-		rv = do_command(args);
+		if (is_builtin(args, &rv))
+			printf("is a builtin\n");
+		else
+			rv = do_command(args);
 	return rv;
 }
 

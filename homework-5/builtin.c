@@ -6,6 +6,8 @@
 #include	<string.h>
 #include	<ctype.h>
 #include	<stdlib.h>
+#include	<inttypes.h>
+#include	<errno.h>
 #include	"smsh.h"
 #include	"varlib.h"
 #include	"builtin.h"
@@ -22,6 +24,12 @@ int is_builtin(char **args, int *resultp)
 	if ( is_list_vars(args[0], resultp) )
 		return 1;
 	if ( is_export(args, resultp) )
+		return 1;
+	if ( is_cd(args, resultp) )
+		return 1;
+	if ( is_exit(args, resultp) )
+		return 1;
+	if ( is_read(args, resultp) )
 		return 1;
 	return 0;
 }
@@ -114,4 +122,74 @@ void varsub(char **args)
 			free(args[i]);
 			args[i] = strdup(newstr);
 		}
+}
+
+int is_cd(char **args, int *resultp)
+/*
+ * checks to see if the first argument is cd
+ * if the arg is cd then call exec_cd with the preceding arguments 
+ */
+{
+	if ( strcmp(args[0], "cd") != 0 )
+		return 0;
+
+	*resultp = exec_cd(&args[1]);
+	return 1; 
+}
+
+int is_exit(char **args, int *resultp)
+/*
+ * checks to see if the first argument is exit
+ * if the arg is exit then call exec_exit to exit the shell
+ */
+{ 
+	if ( strcmp(args[0], "exit") != 0 )
+		return 0;
+
+	*resultp = exec_exit(&args[1]);
+	return 1; 
+}
+
+int is_read(char **args, int *resultp)
+/*
+ * checks to see if the first argument is read
+ * if the arg is read then call exec_read to read 
+ */
+{ 
+	if ( strcmp(args[0], "read") != 0 )
+		return 0;
+
+	*resultp = exec_read(&args[1]);
+	return 1; 
+}
+
+int exec_exit(char ** args)
+{
+	int exit_status = 0;
+	char *endptr;
+	if ( args[1] != NULL ) {
+		fprintf(stderr, "exit: too many arguments\n");
+		return -1;
+	}
+
+	if ( args[0] != NULL ) {
+		exit_status = strtol(args[0], &endptr, 10);
+		if ( strlen(endptr) > 0 ) { 
+			fprintf(stderr, "exit: %s: numeric argument required\n", args[0]);
+			return -1; 
+		} 
+	}
+
+	exit(exit_status);
+	return -1;
+}
+
+int exec_cd(char ** args)
+{
+	return 1;
+}
+
+int exec_read(char ** args)
+{
+	return 1;
 }
