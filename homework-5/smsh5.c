@@ -3,6 +3,7 @@
 #include	<unistd.h>
 #include	<signal.h>
 #include	<sys/wait.h>
+
 #include	"smsh.h"
 #include	"splitline.h"
 #include	"varlib.h"
@@ -47,8 +48,8 @@ int main(int argc, char ** argv)
 	}
 
 	while ( (cmdline = next_cmd(prompt, input)) != NULL ){
-		cmdline = substitute_variables(&cmdline);
-		printf("next command %s\n", cmdline);
+		// cmdline = substitute_variables(&cmdline);
+		printf("next command |%s|\n", cmdline);
 
 		if ( (arglist = splitline(cmdline)) != NULL  ){
 			result = process(arglist);

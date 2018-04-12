@@ -125,6 +125,7 @@ void varsub(char **args)
 			if ( newstr == NULL )
 				newstr = "";
 			free(args[i]);
+			printf("the new str:|%s|\n", newstr);
 			args[i] = strdup(newstr);
 		}
 }

@@ -31,6 +31,7 @@
 
 #include	"varlib.h"
 #include	"splitline.h"
+#include	"builtin.h"
 
 #define	MAXVARS	200		/* a linked list would be nicer */
 
@@ -44,7 +45,6 @@ static struct var tab[MAXVARS];			/* the table	*/
 static char *new_string( char *, char *);	/* private methods	*/
 static struct var *find_item(char *, int);
 
-static int get_substr(char *, int);
 static char *escape_char(char **, char*);
 static char *substitute(char **, char*);
 
@@ -83,8 +83,9 @@ char *escape_char(char **cmdline, char* escape)
 	char * new_string = malloc(sizeof(char) * strlen(*cmdline));
 	*escape = '\0'; 
 
-	strcpy(new_string, *cmdline);
-	strcat(new_string, (escape + 1)); 
+	sprintf("%s%s", new_string, *cmdline, (escape + 1));
+	// strcpy(new_string, *cmdline);
+	// strcat(new_string, (escape + 1)); 
 	*cmdline = new_string;
 
 	return escape + 1;		/*Increment by 1 to skip the $*/
@@ -109,7 +110,7 @@ char *substitute(char **cmdline, char *substr)
 	*substr = '\0';
 	int len = strlen(*cmdline);
 
-	while( (*ptr != '\0' && (isalnum(*ptr) || *ptr == '_')) ){
+	while( okname(ptr) ){
 		if( isdigit(*ptr) != 0 && (ptr == substr+1) ) { // found $1, $2 etc
 			ptr++;
 			break;
@@ -123,20 +124,18 @@ char *substitute(char **cmdline, char *substr)
 	lookup_value = VLlookup(substr + 1); // substr should now be \0VAR\0restoftext
 	*ptr = temp;
 
-	new_string = (char*)emalloc(   /* using emalloc to protect against large variables */
+	new_string = (char*)emalloc(   /* using emalloc to protect against large variable values */
 		sizeof(char) * (len + strlen(ptr) + strlen(lookup_value) + 1)
 	);
 
-	strcpy(new_string, *cmdline);
-	strcat(new_string, lookup_value);
-	strcat(new_string, ptr);
+	sprintf(new_string, "%s%s%s", *cmdline, lookup_value, ptr);
 
 	free(*cmdline);
 	*cmdline = new_string;
-	ptr = new_string + len + strlen(lookup_value);
 
+	/* advance pointer past the lookup value */
+	return new_string + len + strlen(lookup_value) - 1; 
 
-	return ptr - 1;
 }
 
 int VLstore( char *name, char *val )
