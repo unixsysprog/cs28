@@ -64,15 +64,21 @@ char ** splitline(char *line)
 	int	i=0;
 	FLEXLIST strings;
 
-	if ( line == NULL )			/* handle special case	*/
+	if ( line == NULL || line[0] == '#' )	/* handle special cases */
 		return NULL;
 
 	fl_init(&strings,0);
 
 	while( line[i] != '\0' )
 	{
-		while ( is_delim(line[i]) )	/* skip leading spaces	*/
+		while ( is_delim(line[i]) )	{/* skip leading spaces	*/
 			i++;
+			if (line[i] == '#') {	/* we're done if we encounter a comment */
+				fl_append(&strings, NULL);
+				return fl_getlist(&strings);
+			}
+		}
+
 		if ( line[i] == '\0' )		/* end of string? 	*/
 			break;			/* yes, get out		*/
 

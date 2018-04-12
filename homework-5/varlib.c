@@ -25,8 +25,12 @@
 
 #include	<stdio.h>
 #include	<stdlib.h>
-#include	"varlib.h"
 #include	<string.h>
+#include 	<ctype.h>
+#include	<regex.h>
+
+#include	"varlib.h"
+#include	"splitline.h"
 
 #define	MAXVARS	200		/* a linked list would be nicer */
 
@@ -40,11 +44,99 @@ static struct var tab[MAXVARS];			/* the table	*/
 static char *new_string( char *, char *);	/* private methods	*/
 static struct var *find_item(char *, int);
 
+static int get_substr(char *, int);
+static char *escape_char(char **, char*);
+static char *substitute(char **, char*);
+
 void VLinit()
 /*
  * initialize variable storage system
  */
 {
+}
+
+char *substitute_variables(char **cmdline)
+/*
+ * Iterates through the string looking for words prefixed with $. 
+ * Will call substitute if it finds the word unless it's $ is escaped.
+ * 
+ */
+{
+	char *substr;
+	for (substr = *cmdline; *substr !='\0'; substr++) {
+		if (*substr == '\\') { 
+			// substr = escape_char(cmdline, substr);
+			substr++;
+		} else if (*substr == '$') {
+			substr = substitute(cmdline, substr);
+		}
+	}
+	return *cmdline;
+}
+
+char *escape_char(char **cmdline, char* escape)
+/*
+ * Escapes a character by nulling out the \ and then concating the orignal
+ * string (cmdline) with the esacped string.
+ */
+{
+	char * new_string = malloc(sizeof(char) * strlen(*cmdline));
+	*escape = '\0'; 
+
+	strcpy(new_string, *cmdline);
+	strcat(new_string, (escape + 1)); 
+	*cmdline = new_string;
+
+	return escape + 1;		/*Increment by 1 to skip the $*/
+}
+
+char *substitute(char **cmdline, char *substr)
+/*
+ * substitute bookends the substr variable with \0 chars
+ * sets the ptr value to be the first chat after the $
+ * 
+ * iterates through the substr until it finds an invalid variable char
+ * and sets the value to \0
+ * 
+ * 
+ */
+{
+	char temp;
+	char *lookup_value;
+	char *new_string;
+	char *ptr = substr + 1;
+
+	*substr = '\0';
+	int len = strlen(*cmdline);
+
+	while( (*ptr != '\0' && (isalnum(*ptr) || *ptr == '_')) ){
+		if( isdigit(*ptr) != 0 && (ptr == substr+1) ) { // found $1, $2 etc
+			ptr++;
+			break;
+		}
+		ptr++;
+	}
+
+	temp = *ptr;
+	*ptr = '\0';
+
+	lookup_value = VLlookup(substr + 1); // substr should now be \0VAR\0restoftext
+	*ptr = temp;
+
+	new_string = (char*)emalloc(   /* using emalloc to protect against large variables */
+		sizeof(char) * (len + strlen(ptr) + strlen(lookup_value) + 1)
+	);
+
+	strcpy(new_string, *cmdline);
+	strcat(new_string, lookup_value);
+	strcat(new_string, ptr);
+
+	free(*cmdline);
+	*cmdline = new_string;
+	ptr = new_string + len + strlen(lookup_value);
+
+
+	return ptr - 1;
 }
 
 int VLstore( char *name, char *val )

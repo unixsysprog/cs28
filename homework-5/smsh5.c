@@ -21,15 +21,35 @@
 
 void	setup();
 
-int main()
+int main(int argc, char ** argv)
 {
 	char	*cmdline, *prompt, **arglist;
 	int	result;
 
 	prompt = DFL_PROMPT ;
+	FILE *input = stdin;
 	setup();
 
-	while ( (cmdline = next_cmd(prompt, stdin)) != NULL ){
+	if (argc > 1) {
+		prompt = "";
+		if ( (input = fopen(argv[1], "r")) == NULL ) {
+			perror("smsh");
+			exit(1);
+		}
+	}
+
+	if (argc > 2) {
+		char key[10];
+		for (int i = 2; i < argc; i++) {
+			sprintf(key, "%d", i-1);
+			VLstore(key, argv[i]);
+		}
+	}
+
+	while ( (cmdline = next_cmd(prompt, input)) != NULL ){
+		cmdline = substitute_variables(&cmdline);
+		printf("next command %s\n", cmdline);
+
 		if ( (arglist = splitline(cmdline)) != NULL  ){
 			result = process(arglist);
 			freelist(arglist);

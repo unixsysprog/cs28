@@ -8,9 +8,14 @@
 #include	<stdlib.h>
 #include	<inttypes.h>
 #include	<errno.h>
+#include	<unistd.h>
+#include	<sys/types.h>
+#include	<sys/uio.h>
+
 #include	"smsh.h"
 #include	"varlib.h"
 #include	"builtin.h"
+#include	"splitline.h"
 
 int is_builtin(char **args, int *resultp)
 /*
@@ -185,11 +190,41 @@ int exec_exit(char ** args)
 }
 
 int exec_cd(char ** args)
-{
-	return 1;
+{ 
+	int rv = 0;
+	char *home;
+
+	if ( args[0] == NULL ) {
+		home = VLlookup("HOME");
+		rv = chdir(home); 
+	} else {
+		rv = chdir(args[0]); 
+	}
+
+	if ( rv == -1 ) {
+		perror("cd");
+		exit(1);
+	}
+	return rv;
 }
 
 int exec_read(char ** args)
+/*
+ * reads from user input and stores value in the first argument to read
+ * if no argument in supplied, user input is stored on REPLY variable
+ */
 {
-	return 1;
+	char * key;
+
+	if ( args[0] == NULL )
+		key = "REPLY";
+	else
+		key = args[0];
+
+	char *prompt = "";
+	char *input = next_cmd(prompt, stdin);
+
+	printf("key: %s, value: %s\n", key, input);
+	VLstore(key, input);
+	return 1; 
 }
