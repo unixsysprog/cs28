@@ -5,6 +5,7 @@
  */
 #include	<stdio.h>
 #include 	<string.h>
+#include	<stdlib.h>
 #include	"smsh.h"
 #include	"process.h"
 
@@ -27,23 +28,24 @@ int ok_to_execute()
  */
 {
 	int	rv = 1;		/* default is positive */
-
+	
 	if ( if_state == WANT_THEN ){
 		syn_err("then expected");
 		rv = 0;
 	}
 	else if ( if_state == THEN_BLOCK && if_result == SUCCESS ) {
-		if_state = WANT_ELSE;
 		rv = 1; 
 	}
 	else if ( if_state == THEN_BLOCK && if_result == FAIL ) {
-		if_state = WANT_ELSE;
 		rv = 0; 
 	}
-	else if ( if_state == ELSE_BLOCK && if_result == SUCCESS )
-		rv = 0;
-	else if ( if_state == ELSE_BLOCK && if_result == FAIL )
-		rv = 1;
+	else if ( if_state == ELSE_BLOCK && if_result == SUCCESS ) {
+		rv = 0; 
+	}
+	else if ( if_state == ELSE_BLOCK && if_result == FAIL ) {
+		rv = 1; 
+	}
+
 	return rv;
 }
 
@@ -91,10 +93,13 @@ int do_control_command(char **args)
 		}
 	}
 	else if ( strcmp(cmd,"else")==0 ){
-		if ( if_state != WANT_ELSE )
+		if ( if_state == NEUTRAL || 
+			 if_state == WANT_THEN || 
+			 if_state == ELSE_BLOCK 
+		) { 
 			rv = syn_err("else unexpected");
-		else if ( if_result == FAIL )
-			if_state = ELSE_BLOCK;
+		}
+		if_state = ELSE_BLOCK;
 		rv = 0;
 	}
 	else if ( strcmp(cmd,"fi")==0 ){ 
@@ -109,6 +114,7 @@ int do_control_command(char **args)
 	}
 	else 
 		fatal("internal error processing:", cmd, 2);
+	
 	return rv;
 }
 
@@ -121,4 +127,17 @@ int syn_err(char *msg)
 	if_state = NEUTRAL;
 	fprintf(stderr,"syntax error: %s\n", msg);
 	return -1;
+}
+
+void check_if_state(char *filename, int line_number)
+/*
+ * checks to make sure the if_state is in neutral when reaching the
+ * EOF function. Otherwise there's a syntax error.
+ */
+{
+	if ( if_state == NEUTRAL ) return ; /* NEUTRAL is the expected state at EOF*/ 
+
+	fprintf(stderr, "%s: line %d: ", filename, line_number);
+	syn_err("unexpected end of file");
+	exit(2);
 }

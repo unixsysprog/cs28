@@ -3,6 +3,7 @@
 #include	<unistd.h>
 #include	<signal.h>
 #include	<sys/wait.h>
+#include	<string.h>
 #include	"smsh.h"
 #include	"builtin.h"
 #include	"varlib.h"
@@ -39,12 +40,7 @@ int process(char *args[])
 	} else if ( is_control_command(args[0]) ) {
 		rv = do_control_command(args); 
 	} else if ( ok_to_execute() ) {
-		if ( is_builtin(args, &rv) ) {
-			/* TODO: bug > type:ls then: eixt followed by: exit */ 
-			printf("builtin return value = %d\n", rv); 
-		} else {
-			rv = do_command(args); 
-		}
+		rv = do_command(args); 
 	}
 	return rv;
 }
@@ -59,15 +55,13 @@ int process(char *args[])
  */
 int do_command(char **args)
 {
-	void varsub(char **);
 	int  is_builtin(char **, int *);
 	int  rv;
 
-	varsub(args);
 	if ( is_builtin(args, &rv) )
 		return rv;
 	rv = execute(args);
-	return rv;
+	return rv >> 8; /* child process return value is high 8 bits */
 }
 
 int execute(char *argv[])
@@ -81,20 +75,22 @@ int execute(char *argv[])
 	int	pid ;
 	int	child_info = -1;
 
-	if ( argv[0] == NULL )		/* nothing succeeds		*/
+	if ( argv[0] == NULL ) {	/* nothing succeeds		*/
 		return 0;
+	}
 
-	if ( (pid = fork())  == -1 )
-		perror("fork");
-	else if ( pid == 0 ){
+	if ( (pid = fork())  == -1 ) {
+		perror("fork"); 
+	}
+	else if ( pid == 0 ) {
 		environ = VLtable2environ();
 		signal(SIGINT, SIG_DFL);
 		signal(SIGQUIT, SIG_DFL);
-		execvp(argv[0], argv);
+
+		execvp(argv[0], argv); 
 		perror("cannot execute command");
 		exit(1);
-	}
-	else {
+	} else {
 		if ( wait(&child_info) == -1 )
 			perror("wait");
 	}

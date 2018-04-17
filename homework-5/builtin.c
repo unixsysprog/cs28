@@ -36,6 +36,8 @@ int is_builtin(char **args, int *resultp)
 		return 1;
 	if ( is_read(args, resultp) )
 		return 1;
+	if ( is_exec(args, resultp) )
+		return 1;
 	return 0;
 }
 /* checks if a legal assignment cmd
@@ -44,7 +46,16 @@ int is_builtin(char **args, int *resultp)
  */
 int is_assign_var(char *cmd, int *resultp)
 {
-	if ( strchr(cmd, '=') != NULL ){
+	char *eq_sign;
+	if ( (eq_sign = strchr(cmd, '=')) != NULL ){
+		if ( isdigit(cmd) ) /* bash variables cannot start with a digit */
+			return 0;
+
+		for (char * substr = cmd; substr != eq_sign; substr++ ) {
+			if ( !(isalnum(*substr) || *substr != '_') )
+				return 0;  /* bash vars are only alphanumeric with underscores */
+		}
+
 		*resultp = assign(cmd);
 		if ( *resultp != -1 )
 			return 1;
@@ -109,26 +120,6 @@ int okname(char *str)
 	}
 	return ( cp != str );	/* no empty strings, either */
 }
-/*
- * step through args.  REPLACE any arg with leading $ with the
- * value for that variable or "" if no match.
- * note: this is NOT how regular sh works
- */
-void varsub(char **args)
-{
-	int	i;
-	char	*newstr;
-
-	for( i = 0 ; args[i] != NULL ; i++ )
-		if ( args[i][0] == '$' ){
-			newstr = VLlookup( args[i]+1 );
-			if ( newstr == NULL )
-				newstr = "";
-			free(args[i]);
-			printf("the new str:|%s|\n", newstr);
-			args[i] = strdup(newstr);
-		}
-}
 
 int is_cd(char **args, int *resultp)
 /*
@@ -152,7 +143,7 @@ int is_exit(char **args, int *resultp)
 	if ( strcmp(args[0], "exit") != 0 )
 		return 0;
 
-	*resultp = exec_exit(&args[1]);
+	*resultp = exec_exit(args + 1);
 	return 1; 
 }
 
@@ -165,7 +156,18 @@ int is_read(char **args, int *resultp)
 	if ( strcmp(args[0], "read") != 0 )
 		return 0;
 
-	*resultp = exec_read(&args[1]);
+	*resultp = exec_read(args + 1);
+	return 1; 
+}
+
+int is_exec(char **args, int *resultp)
+/*
+ * checks to see if the first argument is the exec command
+ */
+{
+	if ( strcmp(args[0], "exec") != 0)
+		return 0;
+	*resultp = exec_exec(args);
 	return 1; 
 }
 
@@ -173,14 +175,15 @@ int exec_exit(char ** args)
 {
 	int exit_status = 0;
 	char *endptr;
-	if ( args[1] != NULL ) {
+	if ( args[0] != NULL && args[1] != NULL ) { /* ex: exit 5 foo */
+		fprintf(stderr, "%s  ", args[1]);
 		fprintf(stderr, "exit: too many arguments\n");
 		return -1;
 	}
 
-	if ( args[0] != NULL ) {
+	if ( args[0] != NULL ) { 					/* ex: exit 3 */
 		exit_status = strtol(args[0], &endptr, 10);
-		if ( strlen(endptr) > 0 ) { 
+		if ( strlen(endptr) > 0 ) {  /* the exit status was not just a number */
 			fprintf(stderr, "exit: %s: numeric argument required\n", args[0]);
 			return -1; 
 		} 
@@ -225,7 +228,13 @@ int exec_read(char ** args)
 	char *prompt = "";
 	char *input = next_cmd(prompt, stdin);
 
-	printf("key: %s, value: %s\n", key, input);
 	VLstore(key, input);
 	return 1; 
+}
+
+int exec_exec(char **args)
+{
+	execvp(args[1], args + 1);
+	perror(args[0]);
+	exit(1);
 }

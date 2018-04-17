@@ -62,33 +62,52 @@ char *substitute_variables(char **cmdline)
  * 
  */
 {
-	char *substr;
-	for (substr = *cmdline; *substr !='\0'; substr++) {
-		if (*substr == '\\') { 
-			// substr = escape_char(cmdline, substr);
-			substr++;
-		} else if (*substr == '$') {
-			substr = substitute(cmdline, substr);
+	char *substr = *cmdline;
+	/* mini parser which could be extended for more advance shell */
+	while ( *substr != '\0' ) {
+		switch ( *substr ) {
+			case '\\':
+				substr = escape_char(cmdline, substr);
+				break;
+			case '$':
+				substr = substitute(cmdline, substr);
+				break;
 		}
+		substr++;
 	}
 	return *cmdline;
 }
 
-char *escape_char(char **cmdline, char* escape)
+char *escape_char(char **cmdline, char *substr)
 /*
  * Escapes a character by nulling out the \ and then concating the orignal
  * string (cmdline) with the esacped string.
  */
 {
-	char * new_string = malloc(sizeof(char) * strlen(*cmdline));
-	*escape = '\0'; 
+	char * new_string = emalloc(sizeof(char) * strlen(*cmdline));
+	*substr = '\0';
 
-	sprintf("%s%s", new_string, *cmdline, (escape + 1));
-	// strcpy(new_string, *cmdline);
-	// strcat(new_string, (escape + 1)); 
-	*cmdline = new_string;
+	int len = strlen(*cmdline);
+	sprintf(new_string, "%s%s", *cmdline, (substr + 1));
 
-	return escape + 1;		/*Increment by 1 to skip the $*/
+	*cmdline = new_string; 
+	return new_string + len;		/*return pointer to the new string*/
+}
+
+int is_valid_bash_variable(char *ptr) 
+/*
+ * bash variable names are alpha-numeric with underscores
+ */
+{
+	return isalnum(*ptr) || *ptr == '_'; 
+}
+
+int is_bash_special_char(char *ptr) 
+ /* There are special bash variables as well like $$ and $?
+  *  that need to be supported as well. 
+  */
+{
+	return isdigit(*ptr) || *ptr == '$' || *ptr == '\?';
 }
 
 char *substitute(char **cmdline, char *substr)
@@ -98,44 +117,40 @@ char *substitute(char **cmdline, char *substr)
  * 
  * iterates through the substr until it finds an invalid variable char
  * and sets the value to \0
- * 
- * 
  */
 {
-	char temp;
-	char *lookup_value;
-	char *new_string;
-	char *ptr = substr + 1;
+	char temp, *lookup_value, *new_string, *ptr = substr + 1; 
 
 	*substr = '\0';
 	int len = strlen(*cmdline);
 
-	while( okname(ptr) ){
-		if( isdigit(*ptr) != 0 && (ptr == substr+1) ) { // found $1, $2 etc
-			ptr++;
-			break;
-		}
+	if ( is_bash_special_char(ptr) && ptr == substr+1 ) { // found $1, $2 etc
 		ptr++;
 	}
+	else {
+		while( *ptr != '\0' &&  is_valid_bash_variable(ptr) ){
+			ptr++;
+		} 
+	} 
 
 	temp = *ptr;
 	*ptr = '\0';
 
-	lookup_value = VLlookup(substr + 1); // substr should now be \0VAR\0restoftext
+	lookup_value = VLlookup(substr + 1); // substr should now be \0VAR\0rest
+
+	if (*(substr + 1) == '\0' && *lookup_value == '\0')
+		lookup_value = "$";          /* bash will echo a $ if it's standalone */
 	*ptr = temp;
 
 	new_string = (char*)emalloc(   /* using emalloc to protect against large variable values */
 		sizeof(char) * (len + strlen(ptr) + strlen(lookup_value) + 1)
 	);
 
-	sprintf(new_string, "%s%s%s", *cmdline, lookup_value, ptr);
-
+	sprintf(new_string, "%s%s%s", *cmdline, lookup_value, ptr); 
 	free(*cmdline);
 	*cmdline = new_string;
 
-	/* advance pointer past the lookup value */
-	return new_string + len + strlen(lookup_value) - 1; 
-
+	return new_string + len + strlen(lookup_value) - 1; /* advance pointer past the lookup value */
 }
 
 int VLstore( char *name, char *val )
